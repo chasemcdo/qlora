@@ -28,8 +28,9 @@ from transformers import (
     set_seed,
     Seq2SeqTrainer,
     BitsAndBytesConfig,
-    LlamaTokenizer
-
+    LlamaTokenizer,
+    PreTrainedModel,
+    PreTrainedTokenizer
 )
 from datasets import load_dataset, Dataset
 import evaluate
@@ -286,7 +287,7 @@ class SavePeftModelCallback(transformers.TrainerCallback):
         touch(join(args.output_dir, 'completed'))
         self.save_model(args, state, kwargs)
 
-def get_accelerate_model(args, checkpoint_dir):
+def get_accelerate_model(args, checkpoint_dir) -> tuple[PreTrainedModel, PreTrainedTokenizer]:
 
     if torch.cuda.is_available():
         n_gpus = torch.cuda.device_count()
@@ -709,6 +710,9 @@ def train():
 
     data_module = make_data_module(tokenizer=tokenizer, args=args)
     
+    if "gpt2" in model.name_or_path:
+        model.transformer.first_device = torch.device('cuda:0')
+
     trainer = Seq2SeqTrainer(
         model=model,
         tokenizer=tokenizer,
